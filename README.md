@@ -1,2 +1,3 @@
-# Palo Alto GRE to Netskope
 # Netskope GRE Configuration Examples
+
+## Palo Alto NGFW 10.0
