@@ -1,0 +1,162 @@
+# set network interface tunnel units tunnel.1 ip 10.1.1.1/30
+# set network virtual-router default interface tunnel.1
+# set zone public network layer3 tunnel.1
+
+# set network interface tunnel units tunnel.2 ip 10.1.2.1/30
+# set network virtual-router default interface tunnel.2
+# set zone public network layer3 tunnel.2
+
+
+
+# set network tunnel gre netskope_mel1 tunnel-interface tunnel.1 peer-address ip 163.116.198.36
+# set network tunnel gre netskope_mel1 tunnel-interface tunnel.1 local-address interface ethernet1/1 ip 10.254.1.253/24
+# set network tunnel gre netskope_mel1 tunnel-interface tunnel.1 keep-alive enable yes
+
+# set network tunnel gre netskope_sy4 tunnel-interface tunnel.2 peer-address ip 45.250.160.32
+# set network tunnel gre netskope_sy4 tunnel-interface tunnel.2 local-address interface ethernet1/1 ip 10.254.1.253/24
+# set network tunnel gre netskope_sy4 tunnel-interface tunnel.2 keep-alive enable yes
+# commit
+
+# exit
+Exiting configuration mode
+> show interface tunnel.1
+
+--------------------------------------------------------------------------------
+Name: tunnel.1, ID: 256
+Operation mode: layer3
+Virtual router default
+Interface MTU 1500
+Interface IP address: 10.1.1.1/30
+Interface management profile: N/A
+Service configured: 
+Zone: public, virtual system: vsys1
+Adjust TCP MSS: no
+Policing: no
+--------------------------------------------------------------------------------
+GRE tunnel name:               netskope_mel1
+tunnel interface state:        Up
+disabled:                      False
+copy-tos:                      False
+keep alive enabled:            True
+local-ip:                      10.254.1.253
+peer-ip:                       163.116.198.36
+stats:
+   ka-id:                      295
+   ka-send:                    295
+   ka-recv:                    295
+   ka-curr-retry:              0
+   ka-last-timestamp:          8874
+   ka-recv-map:                0
+   ka-owner:                   0
+--------------------------------------------------------------------------------
+Logical interface counters read from CPU:
+--------------------------------------------------------------------------------
+bytes received                           0
+bytes transmitted                        14076
+packets received                         0
+packets transmitted                      306
+receive errors                           0
+packets dropped                          0
+packets dropped by flow state check      0
+forwarding errors                        0
+no route                                 0
+arp not found                            0
+neighbor not found                       0
+neighbor info pending                    0
+mac not found                            0
+packets routed to different zone         0
+land attacks                             0
+ping-of-death attacks                    0
+teardrop attacks                         0
+ip spoof attacks                         0
+mac spoof attacks                        0
+ICMP fragment                            0
+layer2 encapsulated packets              0
+layer2 decapsulated packets              0
+tcp cps                                  0
+udp cps                                  0
+sctp cps                                 0
+other cps                                0
+--------------------------------------------------------------------------------
+
+
+> show interface tunnel.2
+
+--------------------------------------------------------------------------------
+Name: tunnel.2, ID: 257
+Operation mode: layer3
+Virtual router default
+Interface MTU 1500
+Interface IP address: 10.1.2.1/30
+Interface management profile: N/A
+Service configured: 
+Zone: public, virtual system: vsys1
+Adjust TCP MSS: no
+Policing: no
+--------------------------------------------------------------------------------
+GRE tunnel name:               netskope_sy4
+tunnel interface state:        Up
+disabled:                      False
+copy-tos:                      False
+keep alive enabled:            True
+local-ip:                      10.254.1.253
+peer-ip:                       45.250.160.32
+stats:
+   ka-id:                      295
+   ka-send:                    295
+   ka-recv:                    295
+   ka-curr-retry:              0
+   ka-last-timestamp:          8874
+   ka-recv-map:                0
+   ka-owner:                   0
+--------------------------------------------------------------------------------
+Logical interface counters read from CPU:
+--------------------------------------------------------------------------------
+bytes received                           0
+bytes transmitted                        14076
+packets received                         0
+packets transmitted                      306
+receive errors                           0
+packets dropped                          0
+packets dropped by flow state check      0
+forwarding errors                        0
+no route                                 0
+arp not found                            0
+neighbor not found                       0
+neighbor info pending                    0
+mac not found                            0
+packets routed to different zone         0
+land attacks                             0
+ping-of-death attacks                    0
+teardrop attacks                         0
+ip spoof attacks                         0
+mac spoof attacks                        0
+ICMP fragment                            0
+layer2 encapsulated packets              0
+layer2 decapsulated packets              0
+tcp cps                                  0
+udp cps                                  0
+sctp cps                                 0
+other cps                                0
+--------------------------------------------------------------------------------
+
+
+# set service service-netskope protocol tcp port 80,443
+# set network profiles monitor-profile netskope_gre interval 3 threshold 5 action fail-over 
+
+# set rulebase pbf rules pbf_to_netskope_mel1 action forward egress-interface tunnel.1 monitor ip-address 10.198.6.209 profile netskope_gre
+# set rulebase pbf rules pbf_to_netskope_mel1 source 10.254.2.0/24 destination any service service-netskope from zone private
+
+# set rulebase pbf rules pbf_to_netskope_sy4 action forward egress-interface tunnel.2 monitor ip-address 172.24.16.13 profile netskope_gre
+# set rulebase pbf rules pbf_to_netskope_sy4 source 10.254.2.0/24 destination any service service-netskope from zone private
+
+
+# set rulebase nat rules dont_snat_netskope_mel1 from private to public source 10.254.2.0/24 destination any service service-netskope to-interface tunnel.1
+# set rulebase nat rules dont_snat_netskope_sy4 from private to public source 10.254.2.0/24 destination any service service-netskope to-interface tunnel.2
+
+Once a packet matches the criteria of a single NAT rule, the packet is not subjected to additional NAT rules. Therefore, your list of NAT rules should be in order from most specific to least specific so that packets are subjected to the most specific rule you created for them.
+
+# move rulebase nat rules dont_snat_netskope_mel1 top
+# move rulebase nat rules dont_snat_netskope_sy4 after dont_snat_netskope_mel1 
+# commit
+
